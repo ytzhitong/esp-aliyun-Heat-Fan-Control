@@ -1,0 +1,6 @@
+key,type,encoding,value
+aliyun-key,namespace,,
+DeviceName,data,string,Hea_Fan_001
+DeviceSecret,data,string,Hjpe07WiTGpFLuvoafBiV841l5fDvFUf
+ProductKey,data,string,a1xUcMrB7Zg
+ProductSecret,data,string,MCMFTRSWc2iLQrOT

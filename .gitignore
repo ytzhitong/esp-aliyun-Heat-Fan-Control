@@ -1,0 +1,17 @@
+# Config file
+.settings
+.project
+.cproject
+
+# IDF compile output
+examples/*/build/*
+examples/*/*/build/*
+mqtt_example/build/*
+mqtt_example/*/build/*
+
+# config
+sdkconfig
+sdkconfig.old
+
+# VS Code Settings
+.vscode/

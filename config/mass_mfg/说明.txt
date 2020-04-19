@@ -1,0 +1,8 @@
+ cd D:/git-repository/ESP32/esp-aliyun-Heat-Fan-Control/config/mass_mfg
+
+$IDF_PATH/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py --input my_single_mfg_config.csv --output my_single_mfg.bin --size 0x4000
+
+$IDF_PATH/components/esptool_py/esptool/esptool.py write_flash 0x110000 my_single_mfg.bin
+
+
+cd E:/git-repositories/ESP32/esp-aliyun-Heat-Fan-Control/mqtt_example
