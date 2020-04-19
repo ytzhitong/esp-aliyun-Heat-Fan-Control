@@ -10,8 +10,8 @@ mqtt_example/build/*
 mqtt_example/*/build/*
 
 # config
-sdkconfig
-sdkconfig.old
+#sdkconfig
+#sdkconfig.old
 
 # VS Code Settings
 .vscode/
