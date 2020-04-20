@@ -6,6 +6,17 @@
 
 typedef struct
 {
+	int  step_index;
+	bool step_turn;
+	bool step_switch;
+	int  step_num;
+
+}_stepper;
+
+extern _stepper stepper;
+
+typedef struct
+{
  int16_t  SV;
  int16_t  PV;
  uint8_t  MV;
@@ -84,6 +95,9 @@ void FAN_set_speed(bool FanSwitch,uint16_t speed);
 
 void STEPPER_init(void);
 void Flue_set_on(bool FlueSwitch);
+
+#define GPIO_INPUT_POW    34
+#define GPIO_OUTPUT_LED    13
 
 bool GPIO_init(void);
 

@@ -33,8 +33,8 @@ uint16_t B_BCD(uint8_t val)
 }
 
 
-#define I2C_DS3231_MASTER_SCL_IO          27                /*!< gpio number for I2C master clock */
-#define I2C_DS3231_MASTER_SDA_IO          14               /*!< gpio number for I2C master data  */
+#define I2C_DS3231_MASTER_SCL_IO          14                /*!< gpio number for I2C master clock */
+#define I2C_DS3231_MASTER_SDA_IO          27               /*!< gpio number for I2C master data  */
 #define I2C_DS3231_MASTER_NUM             I2C_NUM_0        /*!< I2C port number for master dev */
 
 #define I2C_MASTER_FREQ_HZ 10000        /*!< I2C master clock frequency */

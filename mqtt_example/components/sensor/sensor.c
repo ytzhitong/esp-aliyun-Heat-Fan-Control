@@ -78,11 +78,11 @@ uint16_t aibus_rx_cmd(uint8_t* rx_buff)
 		return 0;
 }
 
-//addr     :设备地址
-//cmd_code :指令代码，读取为0x52，写入为0x67
-//para_code:参数代码
-//para_val :参数值，读取指令为0
-//返回值              :参数值，
+//addr     :璁惧鍦板潃
+//cmd_code :鎸囦护浠ｇ爜锛岃鍙栦负0x52锛屽啓鍏ヤ负0x67
+//para_code:鍙傛暟浠ｇ爜
+//para_val :鍙傛暟鍊硷紝璇诲彇鎸囦护涓�0
+//杩斿洖鍊�              :鍙傛暟鍊硷紝
 uint16_t send_aibus_cmd(uint8_t addr,uint8_t cmd_code, uint8_t para_code ,uint16_t para_val)
 {
 	uint16_t check_buf=0;
@@ -104,7 +104,7 @@ uint16_t send_aibus_cmd(uint8_t addr,uint8_t cmd_code, uint8_t para_code ,uint16
 
 	if(len>=10)
 	{
-	    return aibus_rx_cmd(aibus_rx_buff);//处理接收到的数据
+	    return aibus_rx_cmd(aibus_rx_buff);//澶勭悊鎺ユ敹鍒扮殑鏁版嵁
 	}
 	else
 	{
@@ -154,10 +154,8 @@ uint8_t uart1_rx485_init(void)
 }
 
 
-#define GPIO_OUTPUT_LED    13
 #define GPIO_OUT_LED_SEL  1ULL<<GPIO_OUTPUT_LED
 
-#define GPIO_INPUT_POW    34
 #define GPIO_INPUT_LED_SEL   1ULL<<GPIO_INPUT_POW
 
 uint16_t flash_gap = 450;
@@ -209,10 +207,10 @@ bool GPIO_init(void)
 //    xTaskCreate(LED_task, "LED_task", 2048, NULL, 5, NULL);
 }
 
-#define STEPPER_A    13
-#define STEPPER_B    13
-#define STEPPER_C    13
-#define STEPPER_D    13
+#define STEPPER_A    26
+#define STEPPER_B    25
+#define STEPPER_C    33
+#define STEPPER_D    32
 
 #define STEP_A  gpio_set_level(STEPPER_A, 1);gpio_set_level(STEPPER_B, 0);gpio_set_level(STEPPER_C, 0);gpio_set_level(STEPPER_D, 0);
 #define STEP_AB gpio_set_level(STEPPER_A, 1);gpio_set_level(STEPPER_B, 1);gpio_set_level(STEPPER_C, 0);gpio_set_level(STEPPER_D, 0);
@@ -225,6 +223,61 @@ bool GPIO_init(void)
 #define STEP_OFF  gpio_set_level(STEPPER_A, 0);gpio_set_level(STEPPER_B, 0);gpio_set_level(STEPPER_C, 0);gpio_set_level(STEPPER_D, 0);
 
 #define GPIO_OUT_STEPPER_SEL  (1ULL<<STEPPER_A|1ULL<<STEPPER_B|1ULL<<STEPPER_C|1ULL<<STEPPER_D)
+
+_stepper stepper={0,1,0,0};
+
+void stepper_task(void *pvParameter)
+{
+	while (1)
+    {
+		if(stepper.step_switch==0)
+		{
+			STEP_OFF
+		}
+		else
+		{
+		  switch(stepper.step_index)
+		  {
+			case 0:STEP_A
+				break;
+			case 1:STEP_AB
+				break;
+			case 2:STEP_B
+				break;
+			case 3:STEP_BC
+				break;
+			case 4:STEP_C
+				break;
+			case 5:STEP_CD
+				break;
+			case 6:STEP_D
+				break;
+			case 7:STEP_DA
+				break;
+		  }
+
+		  stepper.step_num--;
+		  if(stepper.step_num<0)
+			  stepper.step_switch=0;
+
+		  if(stepper.step_turn==1)//foreward
+		  {
+			  stepper.step_index++;
+			  if(stepper.step_index>7)
+				  stepper.step_index=0;
+		  }
+		  else//
+		  {
+			  stepper.step_index--;
+			  if(stepper.step_index<0)
+				  stepper.step_index=7;
+		  }
+		}
+
+		vTaskDelay(10/ portTICK_RATE_MS);
+    }
+    vTaskDelete(NULL);
+}
 
 void STEPPER_init(void)
 {
@@ -242,69 +295,23 @@ void STEPPER_init(void)
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
+    xTaskCreate(stepper_task, "stepper_task", 2048, NULL, 5, NULL);
 }
-
-int  step_all=0;
-int  step_now=0;
-//steps:步数
-//delay:步间延迟，ms
-//返回值   :运行步数
-void step(int steps,int delay)
-{
-  step_all=step_all+steps;
-  while(1)
-  {
-	  switch(step_now)
-	  {
-		case 0:STEP_A
-			break;
-		case 1:STEP_AB
-			break;
-		case 2:STEP_B
-			break;
-		case 3:STEP_BC
-			break;
-		case 4:STEP_C
-			break;
-		case 5:STEP_CD
-			break;
-		case 6:STEP_D
-			break;
-		case 7:STEP_DA
-			break;
-	  }
-	  vTaskDelay(delay / portTICK_RATE_MS);
-
-	  if(steps>0)//正转
-	  {
-		  steps--;
-		  if(steps<0)
-			  break;
-		  step_now++;
-		  if(step_now>7)
-			  step_now=0;
-	  }
-	  if(steps<0)//反转
-	  {
-		  steps++;
-		  if(steps>0)
-			  break;
-		  step_now--;
-		  if(step_now<0)
-			  step_now=7;
-	  }
-  }
-}
-
-#define step_num   1024
-#define step_delay 1
 
 void Flue_set_on(bool FlueSwitch)
 {
-	if(FlueSwitch==0)
-		step(-step_num,step_delay);
-	else
-		step(step_num,step_delay);
+  if(FlueSwitch==0)
+  {
+	  stepper.step_switch=1;
+	  stepper.step_turn=0;
+	  stepper.step_num=1024;
+  }
+  else
+  {
+	  stepper.step_switch=1;
+	  stepper.step_turn=1;
+	  stepper.step_num=1024;
+  }
 }
 
 

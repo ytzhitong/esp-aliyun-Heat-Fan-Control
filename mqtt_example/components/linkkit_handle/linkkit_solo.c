@@ -31,6 +31,7 @@ int HAL_Snprintf(char *str, const int len, const char *fmt, ...);
 #include "sensor.h"
 #include "restore.h"
 #include "esp_log.h"
+#include "DS3231.h"
 
 static const char* TAG = "linkkit_example_solo";
 
@@ -477,8 +478,8 @@ static int linkkit_thread(void *paras)
     while (1) {
     	sensor_get();
 
-    	msg_len = sprintf(msg_pub,"{\"TempA\":%.1f,\"HumA\":%.1f,\"DewpA\":%.1f,\"TempB\":%.1f,\"HumB\":%.1f,\"DewpB\":%.1f,\"TempC\":%.1f,\"HumC\":%.1f,\"DewpC\":%.1f,\"TempD\":%.1f,\"HumD\":%.1f,\"DewpD\":%.1f}",
-    			          sensor_f.tempA,sensor_f.humA,sensor_f.dewA,sensor_f.tempB,sensor_f.humB,sensor_f.dewB,sensor_f.tempC,sensor_f.humC,sensor_f.dewC,sensor_f.tempD,sensor_f.humD,sensor_f.dewD);
+    	msg_len = sprintf(msg_pub,"{\"TempA\":%.1f,\"HumA\":%.1f,\"DewpA\":%.1f,\"TempB\":%.1f,\"HumB\":%.1f,\"DewpB\":%.1f,\"TempC\":%.1f,\"HumC\":%.1f,\"DewpC\":%.1f,\"TempD\":%.1f,\"HumD\":%.1f,\"DewpD\":%.1f,\"SyncTime\":\"%s\"}",
+    			          sensor_f.tempA,sensor_f.humA,sensor_f.dewA,sensor_f.tempB,sensor_f.humB,sensor_f.dewB,sensor_f.tempC,sensor_f.humC,sensor_f.dewC,sensor_f.tempD,sensor_f.humD,sensor_f.dewD,nowtime);
 
     	res = IOT_Linkkit_Report(g_user_example_ctx.master_devid, ITM_MSG_POST_PROPERTY,
     							 (unsigned char *)msg_pub, msg_len);
@@ -486,14 +487,16 @@ static int linkkit_thread(void *paras)
     	for(i=0;i<set_value.Interval*5;i++)
     	{
     		IOT_Linkkit_Yield(EXAMPLE_YIELD_TIMEOUT_MS);
+    		if(gpio_get_level(GPIO_INPUT_POW)==0)
+    		{
+				set_value.FlueSwitch=0;
+				Flue_set_on(set_value.FlueSwitch);
+				return -1;
+    		}
     	}
     }
 
-
     IOT_Linkkit_Close(g_user_example_ctx.master_devid);
-
-
-
     IOT_DumpMemoryStats(IOT_LOG_DEBUG);
     IOT_SetLogLevel(IOT_LOG_NONE);
     return 0;
@@ -503,6 +506,9 @@ void linkkit_main(void *paras)
 {
     while (1) {
         linkkit_thread(NULL);
+
+        if(stepper.step_switch==0)
+        esp_deep_sleep(120000000);
     }
 }
 #endif

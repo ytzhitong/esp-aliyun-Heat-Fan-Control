@@ -238,15 +238,15 @@ void app_main()
     AM2320_gpio_init();     //传感器初始化
 
     sensor_get();
-    sensor_write();
+    //sensor_write();
 
     power_external=GPIO_init();//输入输出引脚初始化
 
-//    if(power_external==0)   //电池供电，存储数据收休眠
-//    {
-//    	//内部供电，存储传感器数据后休眠
-//    	esp_deep_sleep(sleep_gap);
-//    }
+    if(power_external==0)   //电池供电，存储数据收休眠
+    {
+    	//内部供电，存储传感器数据后休眠
+    	esp_deep_sleep(sleep_gap);
+    }
 
     FAN_init();
     STEPPER_init();
