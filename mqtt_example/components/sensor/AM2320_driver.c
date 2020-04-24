@@ -29,10 +29,19 @@ void AM2320_gpio_init(void)
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
+    gpio_set_level(GPIO_AM2320_A,0);
+    gpio_set_level(GPIO_AM2320_B,1);
+    gpio_set_level(GPIO_AM2320_C,1);
+    gpio_set_level(GPIO_AM2320_D,1);
+
+    vTaskDelay(100 / portTICK_RATE_MS);
+
     gpio_set_level(GPIO_AM2320_A,1);
     gpio_set_level(GPIO_AM2320_B,1);
     gpio_set_level(GPIO_AM2320_C,1);
     gpio_set_level(GPIO_AM2320_D,1);
+
+    vTaskDelay(400 / portTICK_RATE_MS);
 }
 
 
@@ -43,25 +52,25 @@ uint8_t AM2320_read_byte(gpio_num_t gpio_num)
 
     for(uint8_t i = 0; i < 8; i++)
     {
-        // 濠碘槅鍋撻幏閿嬬箾閺夋埈鍎庣紒妤�鍊搁埢搴ㄥ灳閼碱剛校闂佹眹鍨藉褔鏌﹂埡鍛強妞ゆ牗纰嶉崕濠勭磽娴ｈ灏版繛纭锋嫹
+        // 婵犵妲呴崑鎾诲箯闁垮绠鹃柡澶嬪焾閸庡海绱掑Δ锟介崐鎼佸煝鎼淬劌鐏抽柤纰卞墰鏍￠梻浣圭湽閸ㄨ棄顭囪閺岋箓鍩￠崨顓炲挤濡炪倖鐗楃喊宥夊磿婵犲嫮纾藉ù锝堫潐鐏忕増绻涚涵閿嬪
         while(!gpio_get_level(gpio_num))
         {
-            // 闂傚倸鍟鍫曨敆濞戞瑦浜ゆ繛鎴灻铏叏濠靛鍤欓柟顖氾躬閹娊鏁撻敓锟�
+            // 闂傚倸鍊搁崯顐㈩嚕閸洦鏁嗘繛鎴炵懄娴溿倖绻涢幋鐏活亜顕ｉ搹顐ｅ弿婵犻潧顭崵娆撴煙椤栨熬韬柟顔藉▕閺佹捇鏁撻敓锟�
             if(++j>=50000)
             {
                 break;
             }
         }
-        // 閻庣偣鍊涢崺鏍ь渻娓氱杯n=26us Max70us 闁荤姴鎼悿鍥╂崲閸愵喖鏋侀柣妤�鐗嗙粊锟�"0" 闂佹眹鍔岀�氫即鎮甸锟介幃浠嬫濞戙垺灏�
+        // 闁诲海鍋ｉ崐娑㈠春閺嵮屾富濞撴氨鏉痭=26us Max70us 闂佽崵濮撮幖顐︽偪閸モ晜宕查柛鎰靛枛閺嬩線鏌ｅΔ锟介悧鍡欑矈閿燂拷"0" 闂備焦鐪归崝宀�锟芥矮鍗抽幃鐢割敋閿熶粙骞冩禒瀣棃婵炴垯鍨虹亸锟�
         ets_delay_us(30);
 
-        // 闂佸憡甯囬崐鏍蓟閸ャ劌顕遍柣妯哄暱婵℃娊鏌涢敐鍐ㄥ鐟滄澘鍊块弻鍛媴鐟欏嫭顔嶉梺纭咁嚃閸犳洜绱為敓锟�
+        // 闂備礁鎲＄敮鍥磹閺嶎厼钃熼柛銉ｅ妼椤曢亶鏌ｅΟ鍝勬毐濠碘剝濞婇弻娑㈡晲閸愩劌顬堥悷婊勬緲閸婂潡寮婚崨顔藉閻熸瑥瀚宥夋⒑绾拋鍤冮柛鐘虫礈缁辩偤鏁撻敓锟�
         bit = gpio_get_level(gpio_num);
         j = 0;
-        // 缂備焦绋戦ˇ顖滄閻斿壊娈楁俊顖氬悑閺嗏晜顨ラ悙鑼紞缂侇喓鍔戝鍫曟晸閿燂拷
+        // 缂傚倷鐒︾粙鎴λ囬婊勵偨闁绘柨澹婂▓妤佷繆椤栨艾鎮戦柡鍡忔櫆椤ㄣ儵鎮欓懠顒婄礊缂備緡鍠撻崝鎴濐嚕閸洘鏅搁柨鐕傛嫹
         while(gpio_get_level(gpio_num))
         {
-            // 闂傚倸鍟鍫曨敆濞戞瑦浜ゆ繛鎴灻铏叏濠靛鍤欓柟顖氾躬閹娊鏁撻敓锟�
+            // 闂傚倸鍊搁崯顐㈩嚕閸洦鏁嗘繛鎴炵懄娴溿倖绻涢幋鐏活亜顕ｉ搹顐ｅ弿婵犻潧顭崵娆撴煙椤栨熬韬柟顔藉▕閺佹捇鏁撻敓锟�
             if(++j >= 50000)
             {
                 break;
@@ -82,16 +91,16 @@ uint8_t  AM2320_get_value(gpio_num_t gpio_num,uint16_t* hum,int16_t* temp,int16_
 	uint8_t HumHigh, HumLow, TempHigh, TempLow, TempChecksum, Temp;
 
 	gpio_set_direction(gpio_num, GPIO_MODE_OUTPUT);
-	gpio_set_level(gpio_num, 0);		//鎷変綆1000us
+	gpio_set_level(gpio_num, 0);		//閹峰缍�1000us
 	ets_delay_us(1000);
 
 	gpio_set_direction(gpio_num, GPIO_MODE_INPUT);
 //	gpio_set_level(GPIO_AM2320, 1);
-	ets_delay_us(30); //閲婃斁鎬荤嚎30us
+	ets_delay_us(30); //闁插﹥鏂侀幀鑽ゅ殠30us
 
 //	gpio_set_direction(GPIO_AM2320, GPIO_MODE_INPUT);
-	ets_delay_us(6); //寤舵椂6us锛岀瓑寰呯ǔ瀹�
-    while(gpio_get_level(gpio_num)==0) //鍒ゆ柇浠庢満鏄惁鏈変綆鐢靛钩鍝嶅簲淇″彿
+	ets_delay_us(6); //瀵よ埖妞�6us閿涘瞼鐡戝鍛旂�癸拷
+    while(gpio_get_level(gpio_num)==0) //閸掋倖鏌囨禒搴㈡簚閺勵垰鎯侀張澶夌秵閻㈤潧閽╅崫宥呯安娣団�冲娇
     {
        i++;
        ets_delay_us(1);
@@ -99,8 +108,8 @@ uint8_t  AM2320_get_value(gpio_num_t gpio_num,uint16_t* hum,int16_t* temp,int16_
     	   break;
     }
 
-    ets_delay_us(6); //寤舵椂6us锛岀瓑寰呯ǔ瀹�
-    while(gpio_get_level(gpio_num)==1) //鍒ゆ柇浠庢満鏄惁鏈夐珮鐢靛钩鍝嶅簲淇″彿
+    ets_delay_us(6); //瀵よ埖妞�6us閿涘瞼鐡戝鍛旂�癸拷
+    while(gpio_get_level(gpio_num)==1) //閸掋倖鏌囨禒搴㈡簚閺勵垰鎯侀張澶愮彯閻㈤潧閽╅崫宥呯安娣団�冲娇
     {
        j++;
        ets_delay_us(1);
@@ -108,10 +117,10 @@ uint8_t  AM2320_get_value(gpio_num_t gpio_num,uint16_t* hum,int16_t* temp,int16_
     	   break;
     }
 
-    if(i>80||j>80||i<20||j<20) //鍝嶅簲寮傚父
+    if(i>80||j>80||i<20||j<20) //閸濆秴绨插鍌氱埗
     return 1;
 
-    // 鎺ユ敹鏁版嵁
+    // 閹恒儲鏁归弫鐗堝祦
     HumHigh   = AM2320_read_byte(gpio_num);
     HumLow    = AM2320_read_byte(gpio_num);
     TempHigh  = AM2320_read_byte(gpio_num);
@@ -146,7 +155,7 @@ uint8_t  AM2320_get_value(gpio_num_t gpio_num,uint16_t* hum,int16_t* temp,int16_
 
     *dew=Tdp*10;
 
-    ESP_LOGI(TAG, "t:%.4f RH:%.4f A:%.4f B:%.4f c:%.4f b:%.4f a:%.4f Tdp:%.1f \n",t,RH, A, B, c,b,a,Tdp);
+    ESP_LOGI(TAG, "num:%d t:%.4f RH:%.4f A:%.4f B:%.4f c:%.4f b:%.4f a:%.4f Tdp:%.1f \n",gpio_num,t,RH, A, B, c,b,a,Tdp);
 
     return 0;
 }

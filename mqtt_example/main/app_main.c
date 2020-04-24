@@ -225,6 +225,8 @@ void sensor_get(void)
 	sensor.time_l=TimeStamp;
 
 	sensor.volt=ADC_value_get(ADC_CHANNEL_7,ADC_ATTEN_DB_11)*1.7228;
+
+	Heater_get_pv();
 }
 
 bool power_external = false;
@@ -232,21 +234,22 @@ bool power_external = false;
 
 void app_main()
 {
-    factory_restore_init(); //存储初始化
     Spiffs_init();          //文件系统初始化
     DS3231_i2c_init();      //时钟初始化
     AM2320_gpio_init();     //传感器初始化
 
     sensor_get();
-    //sensor_write();
 
     power_external=GPIO_init();//输入输出引脚初始化
 
     if(power_external==0)   //电池供电，存储数据收休眠
     {
     	//内部供电，存储传感器数据后休眠
-    	esp_deep_sleep(sleep_gap);
+    	sensor_write();
+    	sleep_enter();
     }
+
+    factory_restore_init(); //存储初始化
 
     FAN_init();
     STEPPER_init();

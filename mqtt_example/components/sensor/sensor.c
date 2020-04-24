@@ -7,6 +7,8 @@
 #include "driver/ledc.h"
 #include "driver/uart.h"
 
+#include "esp_timer.h"
+
 #include "sensor.h"
 
 static const char* TAG = "app sensor";
@@ -125,6 +127,12 @@ void Heater_set_sv(double sv)
 	send_aibus_cmd(aibus_addr,aibus_write, aibus_para_sv,(int)sv*10);
 }
 
+void Heater_get_pv(void)
+{
+	send_aibus_cmd(aibus_addr,aibus_read, aibus_para_sv,0);
+}
+
+
 #define RX485_TXD  (GPIO_NUM_4)
 #define RX485_RXD  (GPIO_NUM_16)
 #define RX485_RTS  (UART_PIN_NO_CHANGE)
@@ -145,7 +153,7 @@ uint8_t uart1_rx485_init(void)
     uart_set_pin(UART_NUM_1, RX485_TXD, RX485_RXD, RX485_RTS, RX485_CTS);
     uart_driver_install(UART_NUM_1, BUF_SIZE * 2, 0, 0, NULL, 0);
 
-    vTaskDelay(500 / portTICK_RATE_MS);
+    vTaskDelay(2000 / portTICK_RATE_MS);
 
     Heater_set_on(set_value.HeatSwitch);
     Heater_set_sv(set_value.HeatSV);
@@ -202,9 +210,9 @@ bool GPIO_init(void)
 
     gpio_set_level(GPIO_OUTPUT_LED,0);
 
-    return gpio_get_level(GPIO_INPUT_POW);
+    xTaskCreate(LED_task, "LED_task", 2048, NULL, 5, NULL);
 
-//    xTaskCreate(LED_task, "LED_task", 2048, NULL, 5, NULL);
+    return gpio_get_level(GPIO_INPUT_POW);
 }
 
 #define STEPPER_A    26
@@ -226,57 +234,54 @@ bool GPIO_init(void)
 
 _stepper stepper={0,1,0,0};
 
-void stepper_task(void *pvParameter)
+static void periodic_timer_callback(void* arg)
 {
-	while (1)
-    {
-		if(stepper.step_switch==0)
-		{
-			STEP_OFF
-		}
-		else
-		{
-		  switch(stepper.step_index)
-		  {
-			case 0:STEP_A
-				break;
-			case 1:STEP_AB
-				break;
-			case 2:STEP_B
-				break;
-			case 3:STEP_BC
-				break;
-			case 4:STEP_C
-				break;
-			case 5:STEP_CD
-				break;
-			case 6:STEP_D
-				break;
-			case 7:STEP_DA
-				break;
-		  }
+//    int64_t time_since_boot = esp_timer_get_time();
+//    ESP_LOGI(TAG, "Periodic timer called, time since boot: %lld us", time_since_boot);
+	if(stepper.step_switch==0)
+	{
+		STEP_OFF
+	}
+	else
+	{
+	  switch(stepper.step_index)
+	  {
+		case 0:STEP_A
+			break;
+		case 1:STEP_AB
+			break;
+		case 2:STEP_B
+			break;
+		case 3:STEP_BC
+			break;
+		case 4:STEP_C
+			break;
+		case 5:STEP_CD
+			break;
+		case 6:STEP_D
+			break;
+		case 7:STEP_DA
+			break;
+	  }
 
-		  stepper.step_num--;
-		  if(stepper.step_num<0)
-			  stepper.step_switch=0;
+	  stepper.step_num--;
+	  if(stepper.step_num<=0)
+		  stepper.step_switch=0;
 
-		  if(stepper.step_turn==1)//foreward
-		  {
-			  stepper.step_index++;
-			  if(stepper.step_index>7)
-				  stepper.step_index=0;
-		  }
-		  else//
-		  {
-			  stepper.step_index--;
-			  if(stepper.step_index<0)
-				  stepper.step_index=7;
-		  }
-		}
+	  if(stepper.step_turn==1)//foreward
+	  {
+		  stepper.step_index++;
+		  if(stepper.step_index>7)
+			  stepper.step_index=0;
+	  }
+	  else//
+	  {
+		  stepper.step_index--;
+		  if(stepper.step_index<0)
+			  stepper.step_index=7;
+	  }
+	}
 
-		vTaskDelay(10/ portTICK_RATE_MS);
-    }
-    vTaskDelete(NULL);
 }
 
 void STEPPER_init(void)
@@ -295,23 +300,40 @@ void STEPPER_init(void)
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
-    xTaskCreate(stepper_task, "stepper_task", 2048, NULL, 5, NULL);
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            /* name is optional, but may help identify the timer when debugging */
+            .name = "periodic"
+    };
+
+    esp_timer_handle_t periodic_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    /* The timer has been created but is not running yet */
+
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 2000));
+
 }
+
+bool FlueSwitch_last=0;
 
 void Flue_set_on(bool FlueSwitch)
 {
-  if(FlueSwitch==0)
-  {
-	  stepper.step_switch=1;
-	  stepper.step_turn=0;
-	  stepper.step_num=1024;
-  }
-  else
-  {
-	  stepper.step_switch=1;
-	  stepper.step_turn=1;
-	  stepper.step_num=1024;
-  }
+	if(FlueSwitch!=FlueSwitch_last)
+	{
+	  if(FlueSwitch==0)
+	  {
+		  stepper.step_switch=1;
+		  stepper.step_turn=0;
+		  stepper.step_num=1024;
+	  }
+	  else
+	  {
+		  stepper.step_switch=1;
+		  stepper.step_turn=1;
+		  stepper.step_num=1024;
+	  }
+	  FlueSwitch_last=FlueSwitch;
+	}
 }
 
 
@@ -354,6 +376,23 @@ void FAN_set_speed(bool FanSwitch,uint16_t speed)
 		ledc_set_duty(LEDC_FAN_MODE, LEDC_FAN_CHANNEL, speed*8192/100);
 		ledc_update_duty(LEDC_FAN_MODE, LEDC_FAN_CHANNEL);
 	}
+}
+
+void sleep_enter(void)
+{
+    const int ext_wakeup_pin_1 = 34;
+    const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
+
+//	gpio_hold_en(LEDC_FAN_GPIO);
+//	gpio_deep_sleep_hold_en();
+
+//	esp_deep_sleep(120000000);
+	esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask , ESP_EXT1_WAKEUP_ANY_HIGH);
+
+	esp_sleep_enable_timer_wakeup(120000000);
+
+	esp_deep_sleep_start();
+
 }
 
 

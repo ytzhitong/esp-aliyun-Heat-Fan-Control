@@ -141,7 +141,7 @@ static int user_trigger_event_reply_event_handler(const int devid, const int msg
 static int user_property_set_event_handler(const int devid, const char *request, const int request_len)
 {
     int res = 0;
-    cJSON *root = NULL, *HeatSwitch = NULL, *HeatSV = NULL, *FanSwitch = NULL, *FanSpeed = NULL,*FlueSwitch = NULL,*Interval = NULL;
+    cJSON *root = NULL, *HeatSwitch = NULL, *HeatSV = NULL, *FanSwitch = NULL, *FanSpeed = NULL,*FlueSwitch = NULL,*Interval = NULL,*Stepper_steps = NULL;
     ESP_LOGI(TAG,"Property Set Received, Devid: %d, Request: %s", devid, request);
 
     if (!request) {
@@ -182,6 +182,9 @@ static int user_property_set_event_handler(const int devid, const char *request,
 
        FlueSwitch = cJSON_GetObjectItem(root, "FlueSwitch");
        if (FlueSwitch) {
+    	   if(stepper.step_switch==1){
+    		   return SUCCESS_RETURN;
+    	   }
     	   set_value.FlueSwitch=FlueSwitch->valueint;
     	   Flue_set_on( set_value.FlueSwitch);
        }
@@ -189,6 +192,22 @@ static int user_property_set_event_handler(const int devid, const char *request,
        Interval = cJSON_GetObjectItem(root, "Interval");
        if (Interval) {
     	   set_value.Interval=Interval->valueint;
+       }
+
+       Stepper_steps = cJSON_GetObjectItem(root, "Stepper_steps");
+       if (Stepper_steps) {
+    	   if(Stepper_steps->valueint<0)
+    	   {
+    		   stepper.step_turn=0;
+    		   stepper.step_num =-Stepper_steps->valueint;
+    		   stepper.step_switch=1;
+    	   }
+    	   else
+    	   {
+    		   stepper.step_turn=1;
+    		   stepper.step_num=Stepper_steps->valueint;
+    		   stepper.step_switch=1;
+    	   }
        }
 
        cJSON_Delete(root);
@@ -465,9 +484,8 @@ static int linkkit_thread(void *paras)
 
     char msg_pub[512];
     int  msg_len;
-    int  i;
     //上报初始状态
-	msg_len = sprintf(msg_pub,"{\"HeatSwitch\":%d,\"TargetTemperature\":%.1f,\"FanSwitch\":%d,\"FANspeed\":%d,\"FlueSwitch\":%d,\"Interval\":%d}",
+	msg_len = sprintf(msg_pub,"{\"HeatSwitch\":%d,\"TargetTemperature\":%.1f,\"FanSwitch\":%d,\"FANspeed\":%d,\"FlueSwitch\":%d,\"Interval\":%d,\"Stepper_steps\":0}",
 			         set_value.HeatSwitch,set_value.HeatSV,set_value.FanSwitch,set_value.FanSpeed,set_value.FlueSwitch,set_value.Interval);
 
 	res = IOT_Linkkit_Report(g_user_example_ctx.master_devid, ITM_MSG_POST_PROPERTY,
@@ -475,11 +493,74 @@ static int linkkit_thread(void *paras)
 	IOT_Linkkit_Yield(EXAMPLE_YIELD_TIMEOUT_MS);
 	//////////
 
-    while (1) {
+	char filename_refer[] = "/spiffs/01.dat";
+	int  i;
+	long time_stamp;
+	unsigned int cnt=1;
+
+	i=calendar.w_date;
+
+    for(unsigned char j=0;j<5;j++)
+    {
+    	sprintf(filename_refer,"/spiffs/%02d.dat", i);
+    	printf("filename: %s \n",filename_refer);
+
+    	i--;
+    	if(i==0)
+    		i=31;
+
+    	FILE* f = fopen(filename_refer, "r");
+        if (f != NULL) //publish
+        {
+            do
+            {
+        		//读flash
+        		fseek(f,-(cnt*sizeof(_sensor_value)),SEEK_END); //将文件指针移到最后一组数据
+        		fread(&sensor_store_read,sizeof(_sensor_value),1,f);
+
+        		EXAMPLE_TRACE( "read data:cnt %d ;timeh:%0x ; timel:%0x \n",sensor_store_read.cnt,sensor_store_read.time_h,sensor_store_read.time_l);
+
+        		time_stamp=(sensor_store_read.time_h<<16)|sensor_store_read.time_l;
+
+        		memset(nowtime, 0, sizeof(nowtime));
+        		struct tm *p=localtime(&time_stamp);
+        		strftime(nowtime, 24, "%Y-%m-%d %H:%M:%S", p);
+        		printf("nowtime = %s\n", nowtime);
+
+        		sensor_f.tempA=(float)sensor_store_read.tempA/10;sensor_f.humA=(float)sensor_store_read.humA/10;sensor_f.dewA=(float)sensor_store_read.dewA/10;
+        		sensor_f.tempB=(float)sensor_store_read.tempB/10;sensor_f.humB=(float)sensor_store_read.humB/10;sensor_f.dewB=(float)sensor_store_read.dewB/10;
+        		sensor_f.tempC=(float)sensor_store_read.tempC/10;sensor_f.humC=(float)sensor_store_read.humC/10;sensor_f.dewC=(float)sensor_store_read.dewC/10;
+        		sensor_f.tempD=(float)sensor_store_read.tempD/10;sensor_f.humD=(float)sensor_store_read.humD/10;sensor_f.dewD=(float)sensor_store_read.dewD/10;
+
+        		/* Generate topic message */
+            	msg_len = sprintf(msg_pub,"{\"TempA\":%.1f,\"HumA\":%.1f,\"DewpA\":%.1f,\"TempB\":%.1f,\"HumB\":%.1f,\"DewpB\":%.1f,\"TempC\":%.1f,\"HumC\":%.1f,\"DewpC\":%.1f,\"TempD\":%.1f,\"HumD\":%.1f,\"DewpD\":%.1f,\"SyncTime\":\"%s\"}",
+            			  sensor_f.tempA,sensor_f.humA,sensor_f.dewA,sensor_f.tempB,sensor_f.humB,sensor_f.dewB,sensor_f.tempC,sensor_f.humC,sensor_f.dewC,sensor_f.tempD,sensor_f.humD,sensor_f.dewD,nowtime);
+
+        		res = IOT_Linkkit_Report(g_user_example_ctx.master_devid, ITM_MSG_POST_PROPERTY,
+        								 (unsigned char *)msg_pub, msg_len);
+        		EXAMPLE_TRACE("Post Property Message ID: %d", res);
+
+        		IOT_Linkkit_Yield(EXAMPLE_YIELD_TIMEOUT_MS);
+
+        		cnt++;
+        		if(sensor_store_read.cnt==1)
+        		{
+        			EXAMPLE_TRACE( "%s publish finish !",filename);
+        			remove(filename_refer);
+        			fclose(f);
+        			cnt=1;
+        			break;
+        		}
+            } while (1);
+        }
+    }
+
+    while (1)
+    {
     	sensor_get();
 
-    	msg_len = sprintf(msg_pub,"{\"TempA\":%.1f,\"HumA\":%.1f,\"DewpA\":%.1f,\"TempB\":%.1f,\"HumB\":%.1f,\"DewpB\":%.1f,\"TempC\":%.1f,\"HumC\":%.1f,\"DewpC\":%.1f,\"TempD\":%.1f,\"HumD\":%.1f,\"DewpD\":%.1f,\"SyncTime\":\"%s\"}",
-    			          sensor_f.tempA,sensor_f.humA,sensor_f.dewA,sensor_f.tempB,sensor_f.humB,sensor_f.dewB,sensor_f.tempC,sensor_f.humC,sensor_f.dewC,sensor_f.tempD,sensor_f.humD,sensor_f.dewD,nowtime);
+    	msg_len = sprintf(msg_pub,"{\"CurrentTemperature\":%.1f,\"TempA\":%.1f,\"HumA\":%.1f,\"DewpA\":%.1f,\"TempB\":%.1f,\"HumB\":%.1f,\"DewpB\":%.1f,\"TempC\":%.1f,\"HumC\":%.1f,\"DewpC\":%.1f,\"TempD\":%.1f,\"HumD\":%.1f,\"DewpD\":%.1f,\"SyncTime\":\"%s\"}",
+    			  aibus_rx_value.PV*0.1,sensor_f.tempA,sensor_f.humA,sensor_f.dewA,sensor_f.tempB,sensor_f.humB,sensor_f.dewB,sensor_f.tempC,sensor_f.humC,sensor_f.dewC,sensor_f.tempD,sensor_f.humD,sensor_f.dewD,nowtime);
 
     	res = IOT_Linkkit_Report(g_user_example_ctx.master_devid, ITM_MSG_POST_PROPERTY,
     							 (unsigned char *)msg_pub, msg_len);
@@ -507,8 +588,12 @@ void linkkit_main(void *paras)
     while (1) {
         linkkit_thread(NULL);
 
-        if(stepper.step_switch==0)
-        esp_deep_sleep(120000000);
+    	while(stepper.step_switch)
+    	{
+    		IOT_Linkkit_Yield(EXAMPLE_YIELD_TIMEOUT_MS);
+    	}
+
+        sleep_enter();
     }
 }
 #endif

@@ -80,6 +80,7 @@ typedef struct
 } _set_value;
 
 extern _set_value    set_value;
+extern _aibus_stru   aibus_rx_value;
 
 void sensor_get(void);
 
@@ -89,6 +90,7 @@ uint8_t uart1_rx485_init(void);
 
 void Heater_set_on(bool onoff);
 void Heater_set_sv(double sv);
+void Heater_get_pv(void);
 
 void FAN_init(void);
 void FAN_set_speed(bool FanSwitch,uint16_t speed);
@@ -100,5 +102,7 @@ void Flue_set_on(bool FlueSwitch);
 #define GPIO_OUTPUT_LED    13
 
 bool GPIO_init(void);
+
+void sleep_enter(void);
 
 #endif

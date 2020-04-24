@@ -102,7 +102,7 @@ void sensor_write(void)
 
     	ESP_LOGE(TAG, "read data:cnt %d ;timeh:%0x ; timel:%0x \n",sensor_store_read.cnt,sensor_store_read.time_h,sensor_store_read.time_l);
 
-    	sensor.cnt=sensor.cnt+1;
+    	sensor.cnt=sensor_store_read.cnt+1;
 
     	fclose(f);
 
