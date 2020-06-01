@@ -101,6 +101,8 @@ void Flue_set_on(bool FlueSwitch);
 #define GPIO_INPUT_POW    34
 #define GPIO_OUTPUT_LED    13
 
+#define LEDC_FAN_GPIO       (17)
+
 bool GPIO_init(void);
 
 void sleep_enter(void);

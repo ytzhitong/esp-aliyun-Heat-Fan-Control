@@ -234,6 +234,7 @@ bool power_external = false;
 
 void app_main()
 {
+
     Spiffs_init();          //文件系统初始化
     DS3231_i2c_init();      //时钟初始化
     AM2320_gpio_init();     //传感器初始化
@@ -251,8 +252,8 @@ void app_main()
 
     factory_restore_init(); //存储初始化
 
-    FAN_init();
     STEPPER_init();
+    FAN_init();
 
     uart1_rx485_init();
 

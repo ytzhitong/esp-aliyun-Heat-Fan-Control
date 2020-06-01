@@ -162,7 +162,7 @@ uint8_t uart1_rx485_init(void)
 }
 
 
-#define GPIO_OUT_LED_SEL  1ULL<<GPIO_OUTPUT_LED
+#define GPIO_OUT_LED_SEL  (1ULL<<GPIO_OUTPUT_LED)| (1ULL<<LEDC_FAN_GPIO)
 
 #define GPIO_INPUT_LED_SEL   1ULL<<GPIO_INPUT_POW
 
@@ -208,7 +208,11 @@ bool GPIO_init(void)
     io_conf.pull_up_en = 0;
     gpio_config(&io_conf);
 
+	gpio_hold_dis(LEDC_FAN_GPIO);
+	gpio_deep_sleep_hold_dis();
+
     gpio_set_level(GPIO_OUTPUT_LED,0);
+    gpio_set_level(LEDC_FAN_GPIO,0);
 
     xTaskCreate(LED_task, "LED_task", 2048, NULL, 5, NULL);
 
@@ -339,7 +343,6 @@ void Flue_set_on(bool FlueSwitch)
 
 #define LEDC_FAN_TIMER      LEDC_TIMER_0
 #define LEDC_FAN_MODE       LEDC_HIGH_SPEED_MODE
-#define LEDC_FAN_GPIO       (17)
 #define LEDC_FAN_CHANNEL    LEDC_CHANNEL_0
 
 void FAN_init(void)
@@ -383,8 +386,9 @@ void sleep_enter(void)
     const int ext_wakeup_pin_1 = 34;
     const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
 
-//	gpio_hold_en(LEDC_FAN_GPIO);
-//	gpio_deep_sleep_hold_en();
+    gpio_set_level(LEDC_FAN_GPIO,0);
+	gpio_hold_en(LEDC_FAN_GPIO);
+	gpio_deep_sleep_hold_en();
 
 //	esp_deep_sleep(120000000);
 	esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask , ESP_EXT1_WAKEUP_ANY_HIGH);
